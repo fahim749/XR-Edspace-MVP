@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XR_EdSpace - Living Textbook AR Demo</title>
+    <meta name="description" content="Augmented Reality demonstration of the Living Textbook concept for educational anatomy">
+    
+    <!-- MindAR and A-Frame Libraries -->
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+        }
+        
+        #loading-screen.hidden {
+            display: none;
+        }
+        
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .tagline {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            max-width: 80%;
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .error-message button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        
+        #info-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 90%;
+            width: 500px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        #info-panel.visible {
+            display: block;
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateX(-50%) translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        #info-panel h2 {
+            margin: 0 0 15px 0;
+            color: #667eea;
+            font-size: 1.5rem;
+        }
+        
+        #info-panel p {
+            margin: 8px 0;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        #info-panel .label {
+            font-weight: bold;
+            color: #764ba2;
+        }
+        
+        #instructions {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+            max-width: 90%;
+        }
+        
+        #instructions.hidden {
+            display: none;
+        }
+        
+        .branding {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            color: #667eea;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .controls-hint {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .controls-hint.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="logo">XR_EdSpace</div>
+        <div class="tagline">Living Textbook AR Experience</div>
+        <div class="spinner"></div>
+        <p style="margin-top: 20px;">Loading AR Experience...</p>
+    </div>
+    
+    <!-- Branding -->
+    <div class="branding">XR_EdSpace</div>
+    
+    <!-- Instructions -->
+    <div id="instructions">
+        📱 Point your camera at the heart diagram to see the 3D model
+    </div>
+    
+    <!-- Information Panel -->
+    <div id="info-panel">
+        <h2>❤️ Human Heart Anatomy</h2>
+        <p><span class="label">Function:</span> The heart is a muscular organ that pumps blood throughout the body via the circulatory system.</p>
+        <p><span class="label">Structure:</span> Four chambers - two atria (upper) and two ventricles (lower) - work together to maintain blood flow.</p>
+        <p><span class="label">Key Features:</span> Coronary arteries supply oxygen-rich blood to the heart muscle itself.</p>
+        <p><span class="label">Size:</span> Approximately the size of a closed fist, weighing 250-350 grams in adults.</p>
+        <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">
+            <strong>Interact:</strong> Pinch to zoom • Rotate with one finger • Pan with two fingers
+        </p>
+    </div>
+    
+    <!-- Controls Hint -->
+    <div class="controls-hint">
+        👆 Touch to rotate • 🤏 Pinch to zoom
+    </div>
+    
+    <!-- A-Frame AR Scene -->
+    <a-scene
+        mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiError: no; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.01;"
+        color-space="sRGB"
+        renderer="colorManagement: true, physicallyCorrectLights"
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false">
+        
+        <a-assets>
+            <a-asset-item id="heartModel" src="./heart.glb"></a-asset-item>
+            <img id="markerImage" src="./test_marker.png" crossorigin="anonymous" />
+        </a-assets>
+        
+        <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse;"></a-camera>
+        
+        <a-entity mindar-image-target="targetIndex: 0">
+            <!-- Background plane with marker image -->
+            <a-plane 
+                src="#markerImage" 
+                position="0 0 0" 
+                height="1.5" 
+                width="1.5" 
+                rotation="0 0 0"
+                opacity="0.3">
+            </a-plane>
+            
+            <!-- 3D Heart Model -->
+            <a-entity
+                id="heart-model"
+                gltf-model="#heartModel"
+                position="0 0 0.2"
+                scale="0.3 0.3 0.3"
+                rotation="0 0 0"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 20000; easing: linear">
+            </a-entity>
+            
+            <!-- Ambient lighting -->
+            <a-light type="ambient" color="#ffffff" intensity="0.8"></a-light>
+            
+            <!-- Directional light -->
+            <a-light type="directional" color="#ffffff" intensity="0.5" position="1 1 1"></a-light>
+        </a-entity>
+    </a-scene>
+    
+    <script>
+        // Wait for scene to be ready
+        const sceneEl = document.querySelector('a-scene');
+        const loadingScreen = document.getElementById('loading-screen');
+        const infoPanel = document.getElementById('info-panel');
+        const instructions = document.getElementById('instructions');
+        const controlsHint = document.querySelector('.controls-hint');
+        
+        // Track if target has been found
+        let targetFound = false;
+        let arStarted = false;
+        
+        // Function to start AR with proper camera configuration
+        async function startAR() {
+            if (arStarted) return;
+            
+            try {
+                console.log('Attempting to start AR...');
+                
+                // Get the MindAR system
+                const mindARSystem = sceneEl.systems['mindar-image-system'];
+                
+                // Try to start with environment camera first (rear camera on mobile)
+                try {
+                    await mindARSystem.start();
+                    console.log('MindAR started successfully with rear camera');
+                    arStarted = true;
+                    loadingScreen.classList.add('hidden');
+                } catch (err) {
+                    console.log('Rear camera failed, trying front camera...', err);
+                    
+                    // If rear camera fails, try user camera (front camera)
+                    // This requires modifying the video constraints
+                    const video = document.querySelector('video');
+                    if (video && video.srcObject) {
+                        video.srcObject.getTracks().forEach(track => track.stop());
+                    }
+                    
+                    // Try again with user-facing camera
+                    try {
+                        // Get user media with front camera
+                        const stream = await navigator.mediaDevices.getUserMedia({
+                            video: {
+                                facingMode: 'user',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            },
+                            audio: false
+                        });
+                        
+                        // Manually set the video source
+                        if (video) {
+                            video.srcObject = stream;
+                            await video.play();
+                        }
+                        
+                        console.log('Front camera started successfully');
+                        arStarted = true;
+                        loadingScreen.classList.add('hidden');
+                        
+                        // Show a message that they're using front camera
+                        instructions.innerHTML = '📱 Using front camera - Point at the marker image on another device or printed paper';
+                        
+                    } catch (frontCamErr) {
+                        throw new Error('Could not access any camera: ' + frontCamErr.message);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error starting AR:', error);
+                showError(error.message);
+            }
+        }
+        
+        function showError(message) {
+            loadingScreen.innerHTML = `
+                <div class="logo">XR_EdSpace</div>
+                <div class="error-message">
+                    <h3>⚠️ Camera Access Required</h3>
+                    <p>${message}</p>
+                    <p style="margin-top: 15px; font-size: 0.9rem;">
+                        Please ensure:<br>
+                        • Camera permissions are granted<br>
+                        • You're using HTTPS<br>
+                        • Your browser supports WebRTC<br>
+                        • No other app is using the camera
+                    </p>
+                    <button onclick="location.reload()">Retry</button>
+                </div>
+            `;
+        }
+        
+        sceneEl.addEventListener('loaded', function () {
+            console.log('A-Frame scene loaded');
+            startAR();
+        });
+        
+        // Listen for target found/lost events
+        const targetEl = document.querySelector('[mindar-image-target]');
+        
+        if (targetEl) {
+            targetEl.addEventListener('targetFound', event => {
+                console.log('Target found');
+                targetFound = true;
+                instructions.classList.add('hidden');
+                infoPanel.classList.add('visible');
+                controlsHint.classList.add('visible');
+            });
+            
+            targetEl.addEventListener('targetLost', event => {
+                console.log('Target lost');
+                targetFound = false;
+                instructions.classList.remove('hidden');
+                infoPanel.classList.remove('visible');
+                controlsHint.classList.remove('visible');
+            });
+        }
+        
+        // Handle errors
+        sceneEl.addEventListener('arError', (event) => {
+            console.error('AR Error:', event.detail);
+            showError('AR Error: ' + (event.detail.error || 'Unknown error'));
+        });
+        
+        // Log when scene is ready
+        sceneEl.addEventListener('renderstart', function () {
+            console.log('Scene rendering started');
+        });
+        
+        // Handle visibility change (when tab becomes active/inactive)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                console.log('Page hidden');
+            } else {
+                console.log('Page visible');
+                if (!arStarted) {
+                    startAR();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
